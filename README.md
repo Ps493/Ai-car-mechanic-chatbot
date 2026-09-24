@@ -56,28 +56,36 @@ Frontend runs at `http://localhost:3000`.
 3. Add env var `NEXT_PUBLIC_API_BASE_URL` = your live backend URL + `/api`.
 4. Deploy. Vercel auto-detects Next.js.
 
-### Backend → AWS free tier (Elastic Beanstalk, simplest path)
-1. `pip install awsebcli`, then from `backend/`: `eb init -p python-3.11 instant-mechanic`.
-2. `eb create instant-mechanic-env --single` (single-instance = free-tier eligible t2/t3.micro).
-3. Set environment variables in the EB console (or `eb setenv`):
-   `SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS=<your-eb-domain>`,
-   `CORS_ALLOWED_ORIGINS=<your-vercel-url>`, `GEMINI_API_KEY`, `GEMINI_MODEL`.
-4. `eb deploy`. Run `eb ssh` → `python manage.py migrate` once after first deploy
-   (or add it as a `.ebextensions` container command — see below).
-5. SQLite lives on the instance's local disk, which is fine for a graded demo
-   but is **not persistent across redeploys/instance replacement** — see
-   ARCHITECTURE.md for the production note on this.
+### Backend → Render (free tier, no credit card required)
+1. Push this repo to GitHub.
+2. Go to [render.com](https://render.com) → sign up with GitHub → **New +** → **Web Service**.
+3. Select this repo. Set:
+   - **Root Directory**: `backend`
+   - **Runtime**: Python 3
+   - **Build Command**: `./build.sh`
+   - **Start Command**: `gunicorn mechanic_project.wsgi:application`
+   - **Instance Type**: Free
+4. Add environment variables (Render dashboard → Environment):
+   `SECRET_KEY` (any long random string), `DEBUG=False`,
+   `CORS_ALLOWED_ORIGINS=<your-vercel-url>`, `GEMINI_API_KEY`,
+   `GEMINI_MODEL=gemini-3.6-flash`.
+5. Click **Create Web Service**. Render runs `build.sh` (installs deps,
+   collects static files, runs migrations) automatically on every deploy —
+   you don't need to SSH in or run anything manually.
+6. Your API will be live at `https://<your-service-name>.onrender.com`.
 
-A minimal `.ebextensions/django.config` for auto-migrate on deploy:
-```yaml
-container_commands:
-  01_migrate:
-    command: "source /var/app/venv/*/bin/activate && python manage.py migrate --noinput"
-```
+**Free-tier notes:**
+- The service spins down after ~15 minutes of inactivity; the first request
+  after that takes ~30–60 seconds to wake up. Fine for a graded demo — just
+  give it a moment on the first request.
+- SQLite lives on Render's local disk, which persists while the instance is
+  running but resets on redeploy — acceptable for this assignment's scope
+  (see ARCHITECTURE.md for the production note on this).
+- No credit card is required for the free web service tier.
 
-Alternative: any host that runs a standard WSGI app works (Render, Railway,
-PythonAnywhere) if AWS setup is more time than you have — `gunicorn
-mechanic_project.wsgi` is the entry point either way.
+Alternative if you outgrow the free tier or want a persistent DB: swap in
+Render's free PostgreSQL (90 days) — just add `dj-database-url` and point
+`DATABASES` at the `DATABASE_URL` env var Render provides.
 
 ## 4. Trying it out
 

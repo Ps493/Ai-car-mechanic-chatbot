@@ -5,7 +5,7 @@
 ```
 ┌─────────────────┐        HTTPS/JSON         ┌──────────────────────────┐
 │  Next.js (React) │ ───────────────────────▶ │  Django + DRF             │
-│  Vercel (free)    │ ◀─────────────────────── │  AWS (free tier)          │
+│  Vercel (free)    │ ◀─────────────────────── │  Render (free)             │
 └─────────────────┘                            │  SQLite                   │
                                                 │                            │
                                                 │  ┌──────────────────────┐  │
@@ -90,9 +90,11 @@ Everything else is deterministic Python:
 
 ## Known trade-offs given the 48-hour scope
 
-- SQLite on a single EB instance is not durable across redeploys — fine for
-  a graded demo, but a production version would move to RDS Postgres (still
-  AWS free-tier eligible) and S3 for media storage.
+- SQLite on Render's free tier persists while the instance is running but
+  resets on redeploy — fine for a graded demo, but a production version
+  would move to a managed Postgres (Render's free tier includes one for 90
+  days, or Supabase/Neon long-term) and object storage (S3/Cloudflare R2)
+  for uploaded media.
 - Audio/video are stored, not transcribed/analyzed — flagged above as an
   intentional AI-usage-minimization + time trade-off, not an oversight.
 - No auth/user accounts — out of scope per the brief; each conversation is
